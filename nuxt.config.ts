@@ -11,11 +11,11 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Portfolio Retro-Futurista',
+      title: 'Portfolio MikiDevAHM',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Portfolio desenvolvido com Nuxt.js, TypeScript e Tailwind CSS' }
+        { name: 'description', content: 'MikiDevAHM - Portfolio' }
       ],
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
