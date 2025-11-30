@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  body {
+    @apply bg-shindo-dark text-shindo-text font-sans;
+    background-image: 
+      radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  * {
+    @apply transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .shindo-card {
+    @apply bg-shindo-light/50 backdrop-blur-sm rounded-xl p-6 border border-shindo-purple/10;
+  }
+
+  .shindo-button {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    @apply hover:scale-105 active:scale-95;
+  }
+
+  .shindo-button-primary {
+    @apply shindo-button bg-shindo-purple text-white;
+    @apply hover:bg-shindo-purple-dark hover:shadow-lg hover:shadow-shindo-purple/50;
+  }
+
+  .shindo-button-secondary {
+    @apply shindo-button bg-shindo-light text-shindo-text border border-shindo-purple/20;
+    @apply hover:bg-shindo-purple/10 hover:border-shindo-purple/40;
+  }
+
+  .shindo-nav-link {
+    @apply text-shindo-text/80 hover:text-shindo-text transition-colors duration-200;
+    @apply font-medium text-sm;
+  }
+
+  .shindo-nav-link-active {
+    @apply text-shindo-text font-semibold;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
