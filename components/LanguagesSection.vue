@@ -6,7 +6,7 @@
         Linguagens nos Projetos
       </h2>
       <p class="text-shindo-text-dim mb-6 text-sm">
-        Linguagens de programação detectadas automaticamente dos seus repositórios do GitHub.
+        Linguagens de programação detectadas automaticamente dos meus repositórios do GitHub.
       </p>
       <div v-if="loading" class="text-center py-12">
         <p class="text-shindo-text-dim animate-pulse">Carregando linguagens...</p>
@@ -119,6 +119,31 @@ const knownTechnologies = [
 const techIconErrors = ref<Set<string>>(new Set())
 
 const config = useRuntimeConfig()
+const requestHeaders = {
+  ...(config.public.githubToken && {
+    'Authorization': `token ${config.public.githubToken}`
+  })
+}
+
+const fetchRepoLanguages = async (languagesUrl: string): Promise<Record<string, number>> => {
+  if (!languagesUrl) {
+    return {}
+  }
+
+  try {
+    const response = await fetch(languagesUrl, {
+      headers: requestHeaders
+    })
+
+    if (!response.ok) {
+      return {}
+    }
+
+    return await response.json()
+  } catch (err) {
+    return {}
+  }
+}
 
 const normalizeTechName = (tech: string): string => {
   const nameMap: Record<string, string> = {
@@ -167,11 +192,7 @@ const fetchLanguages = async () => {
     // Buscar repositórios do usuário
     try {
       const userReposResponse = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`, {
-        headers: {
-          ...(config.public.githubToken && {
-            'Authorization': `token ${config.public.githubToken}`
-          })
-        }
+        headers: requestHeaders
       })
 
       if (userReposResponse.ok) {
@@ -185,11 +206,7 @@ const fetchLanguages = async () => {
     // Buscar repositórios da organização
     try {
       const orgReposResponse = await fetch(`https://api.github.com/orgs/${org}/repos?per_page=100`, {
-        headers: {
-          ...(config.public.githubToken && {
-            'Authorization': `token ${config.public.githubToken}`
-          })
-        }
+        headers: requestHeaders
       })
 
       if (orgReposResponse.ok) {
@@ -204,29 +221,63 @@ const fetchLanguages = async () => {
       throw new Error('Nenhum repositório encontrado')
     }
     
-    // Contar linguagens
-    const langCount: Record<string, { count: number, repos: number }> = {}
-    
-    for (const repo of allRepos) {
-      if (repo.language) {
-        if (!langCount[repo.language]) {
-          langCount[repo.language] = { count: 0, repos: 0 }
+    // Contar linguagens pelo tamanho (bytes) por reposit¢rio
+    const langCount: Record<string, { bytes: number, repos: number }> = {}
+    const limit = 6
+    let index = 0
+
+    const workers = Array.from({ length: Math.min(limit, allRepos.length) }, async () => {
+      while (index < allRepos.length) {
+        const currentIndex = index++
+        const repo = allRepos[currentIndex]
+        const repoLanguages = await fetchRepoLanguages(repo.languages_url)
+
+        for (const [name, bytes] of Object.entries(repoLanguages)) {
+          if (!langCount[name]) {
+            langCount[name] = { bytes: 0, repos: 0 }
+          }
+          langCount[name].bytes += bytes
+          langCount[name].repos++
         }
-        langCount[repo.language].count++
-        langCount[repo.language].repos++
       }
-    }
+    })
+
+    await Promise.all(workers)
 
     // Converter para array e calcular porcentagens
-    const total = Object.values(langCount).reduce((sum, lang) => sum + lang.count, 0)
-    
+    const total = Object.values(langCount).reduce((sum, lang) => sum + lang.bytes, 0)
+
     if (total === 0) {
-      throw new Error('Nenhuma linguagem encontrada')
+      const fallbackCount: Record<string, { count: number, repos: number }> = {}
+
+      for (const repo of allRepos) {
+        if (repo.language) {
+          if (!fallbackCount[repo.language]) {
+            fallbackCount[repo.language] = { count: 0, repos: 0 }
+          }
+          fallbackCount[repo.language].count++
+          fallbackCount[repo.language].repos++
+        }
+      }
+
+      const fallbackTotal = Object.values(fallbackCount).reduce((sum, lang) => sum + lang.count, 0)
+      if (fallbackTotal === 0) {
+        throw new Error('Nenhuma linguagem encontrada')
+      }
+
+      const fallbackArray: Language[] = Object.entries(fallbackCount).map(([name, data]) => ({
+        name,
+        percentage: Math.round((data.count / fallbackTotal) * 100),
+        repos: data.repos
+      }))
+
+      languages.value = fallbackArray.sort((a, b) => b.percentage - a.percentage)
+      return
     }
 
     const langArray: Language[] = Object.entries(langCount).map(([name, data]) => ({
       name,
-      percentage: Math.round((data.count / total) * 100),
+      percentage: Math.round((data.bytes / total) * 100),
       repos: data.repos
     }))
 

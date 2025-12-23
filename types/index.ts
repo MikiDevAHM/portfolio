@@ -7,6 +7,7 @@ export interface Project {
   html_url: string
   language: string | null
   languages_url: string
+  languages?: string[]
   stargazers_count: number
   forks_count: number
   topics: string[]

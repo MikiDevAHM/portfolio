@@ -40,10 +40,11 @@
 
       <div class="flex flex-wrap gap-2 mb-4">
         <span
-          v-if="project.language"
+          v-for="language in displayLanguages"
+          :key="language"
           class="px-3 py-1 bg-gradient-to-r from-shindo-purple/30 to-shindo-purple/10 text-shindo-purple rounded-full text-xs font-medium border border-shindo-purple/20 group-hover:from-shindo-purple/50 group-hover:to-shindo-green/30 group-hover:border-shindo-green/40 group-hover:scale-105 transition-all duration-300"
         >
-          {{ project.language }}
+          {{ language }}
         </span>
         <span
           v-for="topic in project.topics?.slice(0, 3)"
@@ -71,18 +72,7 @@
 <script setup lang="ts">
 import { ExternalLink, Star, GitFork, Code } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-
-interface Project {
-  id: number
-  name: string
-  description: string | null
-  html_url: string
-  language: string | null
-  languages_url: string
-  stargazers_count: number
-  forks_count: number
-  topics: string[]
-}
+import type { Project } from '~/types'
 
 interface Props {
   project: Project
@@ -92,6 +82,13 @@ const props = defineProps<Props>()
 
 const logoError = ref(false)
 const currentBranch = ref('main')
+const displayLanguages = computed(() => {
+  if (props.project.languages && props.project.languages.length > 0) {
+    return props.project.languages
+  }
+
+  return props.project.language ? [props.project.language] : []
+})
 
 // Extrair owner e repo do html_url
 // Exemplo: https://github.com/MikiDevAHM/project-name -> owner: MikiDevAHM, repo: project-name

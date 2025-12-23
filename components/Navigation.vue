@@ -4,11 +4,16 @@
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-shindo-purple to-shindo-purple-dark flex items-center justify-center">
-            <Code2 :size="20" class="text-white" />
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-shindo-purple to-shindo-purple-dark flex items-center justify-center overflow-hidden">
+            <img
+              :src="discordAvatarSrc"
+              :alt="discordAvatarAlt"
+              class="w-10 h-10 rounded-full object-cover"
+              @error="handleDiscordAvatarError"
+            />
           </div>
           <div>
-            <div class="text-shindo-text-light font-bold text-lg">PORTFOLIO</div>
+            <div class="text-shindo-text-light font-bold text-lg">MikiDevAHM</div>
             <div class="text-shindo-text-dim text-xs">DEVELOPER</div>
           </div>
         </div>
@@ -61,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { Code2, Menu, X } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { Menu, X } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import type { Section } from '~/types'
 
 interface Props {
@@ -76,6 +81,13 @@ const emit = defineEmits<{
 }>()
 
 const mobileMenuOpen = ref(false)
+const discordUserId = '928040478220382210'
+const discordAvatarUrl = 'https://cdn.discordapp.com/avatars/928040478220382210/30444227d6a6e4cc1db862771cdc7d8d.png?size=2048'
+const avatarError = ref(false)
+const discordAvatarAlt = 'Discord avatar'
+const fallbackAvatarIndex = computed(() => Number(BigInt(discordUserId) % 5n))
+const fallbackAvatarUrl = computed(() => `https://cdn.discordapp.com/embed/avatars/${fallbackAvatarIndex.value}.png`)
+const discordAvatarSrc = computed(() => (avatarError.value ? fallbackAvatarUrl.value : discordAvatarUrl))
 
 const navItems = [
   { id: 'about' as Section, label: 'Sobre' },
@@ -86,6 +98,10 @@ const navItems = [
 const handleMobileNav = (section: Section) => {
   mobileMenuOpen.value = false
   emit('navigate', section)
+}
+
+const handleDiscordAvatarError = () => {
+  avatarError.value = true
 }
 </script>
 

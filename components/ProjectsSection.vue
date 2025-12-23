@@ -44,19 +44,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-
-interface Project {
-  id: number
-  name: string
-  description: string | null
-  html_url: string
-  language: string | null
-  languages_url: string
-  stargazers_count: number
-  forks_count: number
-  topics: string[]
-  fork?: boolean
-}
+import type { Project } from '~/types'
 
 const personalProjects = ref<Project[]>([])
 const organizationProjects = ref<Project[]>([])
@@ -67,14 +55,16 @@ const errorOrg = ref<string | null>(null)
 
 const config = useRuntimeConfig()
 
-const fetchProjects = async (url: string, isOrg: boolean = false) => {
+const requestHeaders = {
+  ...(config.public.githubToken && {
+    'Authorization': `token ${config.public.githubToken}`
+  })
+}
+
+const fetchProjects = async (url: string) => {
   try {
     const response = await fetch(`${url}?per_page=100&sort=updated`, {
-      headers: {
-        ...(config.public.githubToken && {
-          'Authorization': `token ${config.public.githubToken}`
-        })
-      }
+      headers: requestHeaders
     })
 
     if (!response.ok) {
@@ -88,6 +78,47 @@ const fetchProjects = async (url: string, isOrg: boolean = false) => {
   }
 }
 
+const fetchProjectLanguages = async (project: Project): Promise<string[]> => {
+  if (!project.languages_url) {
+    return []
+  }
+
+  try {
+    const response = await fetch(project.languages_url, {
+      headers: requestHeaders
+    })
+
+    if (!response.ok) {
+      return []
+    }
+
+    const languages: Record<string, number> = await response.json()
+    return Object.entries(languages)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name)
+  } catch (err) {
+    return []
+  }
+}
+
+const addLanguagesToProjects = async (projects: Project[]): Promise<Project[]> => {
+  const results: Project[] = new Array(projects.length)
+  const limit = 6
+  let index = 0
+
+  const workers = Array.from({ length: Math.min(limit, projects.length) }, async () => {
+    while (index < projects.length) {
+      const currentIndex = index++
+      const project = projects[currentIndex]
+      const languages = await fetchProjectLanguages(project)
+      results[currentIndex] = { ...project, languages }
+    }
+  })
+
+  await Promise.all(workers)
+  return results
+}
+
 const fetchPersonalProjects = async () => {
   try {
     loadingPersonal.value = true
@@ -96,7 +127,7 @@ const fetchPersonalProjects = async () => {
     const username = config.public.githubUsername || 'MikiDevAHM'
 
     const projects = await fetchProjects(`https://api.github.com/users/${username}/repos`)
-    personalProjects.value = projects
+    personalProjects.value = await addLanguagesToProjects(projects)
   } catch (err) {
     errorPersonal.value = err instanceof Error ? err.message : 'Erro desconhecido'
     personalProjects.value = []
@@ -113,7 +144,7 @@ const fetchOrganizationProjects = async () => {
     const org = config.public.githubOrg || 'ShindoClient'
 
     const projects = await fetchProjects(`https://api.github.com/orgs/${org}/repos`)
-    organizationProjects.value = projects
+    organizationProjects.value = await addLanguagesToProjects(projects)
   } catch (err) {
     errorOrg.value = err instanceof Error ? err.message : 'Erro desconhecido'
     organizationProjects.value = []
